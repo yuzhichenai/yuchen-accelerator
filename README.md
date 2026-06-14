@@ -17,22 +17,6 @@
 - Windows 10 / 11
 - .NET 8 Desktop Runtime（框架依赖模式）或无需安装（自包含模式）
 
-## 下载使用
-
-从 [Releases](../../releases) 下载最新版本，解压后双击 `GameAccelerator.UI.exe` 即可使用。
-
-### 自包含发布（推荐）
-
-```powershell
-.\scripts\publish.ps1
-```
-
-### 框架依赖发布（体积更小，需安装 .NET 8）
-
-```powershell
-.\scripts\publish.ps1 -FrameworkDependent
-```
-
 ## 技术原理
 
 ```
