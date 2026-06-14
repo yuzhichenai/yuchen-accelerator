@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,6 +14,7 @@ public partial class MainWindow : Window
     private readonly AccelerationService _accelService;
     private readonly DashboardViewModel _dashboardVM;
     private readonly TrafficViewModel _trafficVM;
+    private bool _hasShownTrayTip;
     private DispatcherTimer? _trafficTimer;
     private TaskbarIcon? _trayIcon;
     private MenuItem? _trayToggleItem;
@@ -32,19 +34,15 @@ public partial class MainWindow : Window
         DataContext = dashboardVM;
         NavListBox.SelectedIndex = 0;
 
-        // React to acceleration state changes
         _accelService.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(AccelerationService.IsRunning))
-            {
                 Dispatcher.Invoke(() => UpdateStatus());
-            }
         };
 
-        // Create system tray icon
-        SetupTrayIcon();
+        // Defer tray icon creation until window handle is ready
+        Loaded += (s, e) => SetupTrayIcon();
 
-        // Traffic update timer
         _trafficTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _trafficTimer.Tick += (s, e) =>
         {
@@ -59,42 +57,67 @@ public partial class MainWindow : Window
 
     private void SetupTrayIcon()
     {
-        _trayIcon = new TaskbarIcon
+        try
         {
-            Icon = System.Drawing.SystemIcons.Shield,
-            ToolTipText = "游戏加速器 - 已停止",
-            Visibility = Visibility.Visible
-        };
+            _trayIcon = new TaskbarIcon
+            {
+                Icon = CreateTrayIcon(),
+                ToolTipText = "游戏加速器 - 已停止",
+                Visibility = Visibility.Visible
+            };
 
-        _trayIcon.TrayLeftMouseDown += (s, e) =>
+            _trayIcon.TrayLeftMouseDown += (s, e) =>
+            {
+                Show();
+                WindowState = WindowState.Normal;
+                Activate();
+            };
+
+            var menu = new ContextMenu();
+
+            var showItem = new MenuItem { Header = "显示窗口" };
+            showItem.Click += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
+
+            _trayToggleItem = new MenuItem { Header = "开启加速" };
+            _trayToggleItem.Click += async (s, e) =>
+            {
+                if (_accelService.IsRunning)
+                    await _accelService.StopAsync();
+                else
+                    await _accelService.StartAsync();
+                UpdateStatus();
+            };
+
+            var exitItem = new MenuItem { Header = "退出" };
+            exitItem.Click += (s, e) => Application.Current.Shutdown();
+
+            menu.Items.Add(showItem);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(_trayToggleItem);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(exitItem);
+
+            _trayIcon.ContextMenu = menu;
+        }
+        catch (Exception ex)
         {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        };
+            System.Diagnostics.Debug.WriteLine($"Tray icon creation failed: {ex.Message}");
+        }
+    }
 
-        _trayIcon.ContextMenu = new System.Windows.Controls.ContextMenu();
-        var showItem = new MenuItem { Header = "显示窗口" };
-        showItem.Click += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
-
-        _trayToggleItem = new MenuItem { Header = "开启加速" };
-        _trayToggleItem.Click += async (s, e) =>
-        {
-            if (_accelService.IsRunning)
-                await _accelService.StopAsync();
-            else
-                await _accelService.StartAsync();
-            UpdateStatus();
-        };
-
-        var exitItem = new MenuItem { Header = "退出" };
-        exitItem.Click += (s, e) => Application.Current.Shutdown();
-
-        _trayIcon.ContextMenu.Items.Add(showItem);
-        _trayIcon.ContextMenu.Items.Add(new Separator());
-        _trayIcon.ContextMenu.Items.Add(_trayToggleItem);
-        _trayIcon.ContextMenu.Items.Add(new Separator());
-        _trayIcon.ContextMenu.Items.Add(exitItem);
+    private static System.Drawing.Icon CreateTrayIcon()
+    {
+        var bmp = new System.Drawing.Bitmap(32, 32);
+        using var g = System.Drawing.Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0, 120, 212));
+        g.FillEllipse(brush, 2, 2, 28, 28);
+        using var pen = new System.Drawing.Pen(System.Drawing.Color.White, 2.5f);
+        // Lightning bolt
+        g.DrawLine(pen, 18, 4, 12, 16);
+        g.DrawLine(pen, 12, 16, 20, 16);
+        g.DrawLine(pen, 20, 16, 10, 28);
+        return System.Drawing.Icon.FromHandle(bmp.GetHicon());
     }
 
     private void UpdateStatus()
@@ -140,7 +163,7 @@ public partial class MainWindow : Window
             DataContext = _dashboardVM;
     }
 
-    private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+    private void Window_Closing(object sender, CancelEventArgs e)
     {
         var config = ((App)Application.Current).GetService<Core.Configuration.AppConfig>();
         if (config.MinimizeToTray)
@@ -160,6 +183,11 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.Minimized && config.MinimizeToTray)
         {
             Hide();
+            if (!_hasShownTrayTip && _trayIcon != null)
+            {
+                _trayIcon.ShowNotification("已最小化到系统托盘", "双击托盘图标即可恢复窗口");
+                _hasShownTrayTip = true;
+            }
         }
     }
 }

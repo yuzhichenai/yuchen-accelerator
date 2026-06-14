@@ -30,3 +30,4 @@ Desktop.ini
 
 # App runtime data (don't commit user configs)
 *.log
+.claude/
