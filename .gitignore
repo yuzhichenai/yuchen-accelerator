@@ -1,0 +1,32 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.vs/
+*.DotSettings.user
+*.DotSettings
+.vscode/
+
+# NuGet packages
+packages/
+*.nupkg
+.nuget/
+
+# Build output
+publish/
+output/
+
+# OS files
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# IDE
+.idea/
+*.swp
+*.sln.docstates
+
+# App runtime data (don't commit user configs)
+*.log

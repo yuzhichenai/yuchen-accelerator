@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "updated": "2026-06-14",
+  "rules": [
+    {
+      "domainPattern": "github.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "GitHub Main"
+    },
+    {
+      "domainPattern": "*.github.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 11,
+      "description": "GitHub Subdomains"
+    },
+    {
+      "domainPattern": "*.githubassets.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "GitHub Assets"
+    },
+    {
+      "domainPattern": "*.githubusercontent.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "GitHub User Content"
+    },
+    {
+      "domainPattern": "raw.githubusercontent.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "GitHub Raw"
+    },
+    {
+      "domainPattern": "objects.githubusercontent.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "GitHub LFS Objects"
+    },
+    {
+      "domainPattern": "github.githubassets.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "GitHub UI Assets"
+    }
+  ]
+}

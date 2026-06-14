@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "updated": "2026-06-14",
+  "rules": [
+    {
+      "domainPattern": "*.steampowered.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "Steam Store"
+    },
+    {
+      "domainPattern": "*.steamcommunity.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "Steam Community"
+    },
+    {
+      "domainPattern": "steamcommunity.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "Steam Community (root)"
+    },
+    {
+      "domainPattern": "*.steamcontent.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Steam Workshop CDN"
+    },
+    {
+      "domainPattern": "steamcdn-a.akamaihd.net",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Steam Akamai CDN"
+    },
+    {
+      "domainPattern": "cdn.akamai.steamstatic.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Steam Static CDN"
+    },
+    {
+      "domainPattern": "*.steamstatic.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Steam Static Assets"
+    },
+    {
+      "domainPattern": "api.steampowered.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "Steam API"
+    }
+  ]
+}
