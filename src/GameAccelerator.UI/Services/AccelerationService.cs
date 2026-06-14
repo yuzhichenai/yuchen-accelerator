@@ -163,8 +163,6 @@ public class AccelerationService
             await _hostsManager.ApplyEntriesAsync(entries);
     }
 
-    public (long up, long down) GetProxyTraffic() => _sniProxy.GetTrafficAndReset();
-
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

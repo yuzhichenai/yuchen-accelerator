@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly TrafficViewModel _trafficVM;
     private DispatcherTimer? _trafficTimer;
     private TaskbarIcon? _trayIcon;
+    private MenuItem? _trayToggleItem;
 
     public MainWindow(
         AccelerationService accelService,
@@ -30,6 +31,15 @@ public partial class MainWindow : Window
 
         DataContext = dashboardVM;
         NavListBox.SelectedIndex = 0;
+
+        // React to acceleration state changes
+        _accelService.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(AccelerationService.IsRunning))
+            {
+                Dispatcher.Invoke(() => UpdateStatus());
+            }
+        };
 
         // Create system tray icon
         SetupTrayIcon();
@@ -67,8 +77,8 @@ public partial class MainWindow : Window
         var showItem = new MenuItem { Header = "显示窗口" };
         showItem.Click += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
 
-        var toggleItem = new MenuItem();
-        toggleItem.Click += async (s, e) =>
+        _trayToggleItem = new MenuItem { Header = "开启加速" };
+        _trayToggleItem.Click += async (s, e) =>
         {
             if (_accelService.IsRunning)
                 await _accelService.StopAsync();
@@ -82,7 +92,7 @@ public partial class MainWindow : Window
 
         _trayIcon.ContextMenu.Items.Add(showItem);
         _trayIcon.ContextMenu.Items.Add(new Separator());
-        _trayIcon.ContextMenu.Items.Add(toggleItem);
+        _trayIcon.ContextMenu.Items.Add(_trayToggleItem);
         _trayIcon.ContextMenu.Items.Add(new Separator());
         _trayIcon.ContextMenu.Items.Add(exitItem);
     }
@@ -97,6 +107,9 @@ public partial class MainWindow : Window
             _trayIcon.ToolTipText = _accelService.IsRunning
                 ? "游戏加速器 - 加速中"
                 : "游戏加速器 - 已停止";
+
+        if (_trayToggleItem != null)
+            _trayToggleItem.Header = _accelService.IsRunning ? "停止加速" : "开启加速";
     }
 
     private void UpdateStatusDot()

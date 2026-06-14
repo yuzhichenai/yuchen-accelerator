@@ -36,7 +36,6 @@ public class DnsOptimizer : IDnsOptimizer
         if (ips.Count == 0) return null;
         if (ips.Count == 1) return ips[0];
 
-        // Probe TCP latency to each IP and pick the fastest
         var bestIp = await ProbeFastestIpAsync(ips, 443);
         return bestIp ?? ips[0];
     }
@@ -64,29 +63,120 @@ public class DnsOptimizer : IDnsOptimizer
         await Task.WhenAll(tasks);
 
         var result = allIps.ToList();
-        _cache.Set(domain, result);
+        if (result.Count > 0)
+            _cache.Set(domain, result);
         return result;
     }
 
     public void ClearCache() => _cache.Clear();
 
-    private async Task<List<string>> ResolveWithDnsAsync(string domain, string dnsServer)
+    private static async Task<List<string>> ResolveWithDnsAsync(string domain, string dnsServer)
     {
-        // Use System.Net.Dns with a custom DNS approach
-        // For simplicity, we first try the system DNS, then augment with alternative results
+        var result = new List<string>();
         try
         {
-            var addresses = await System.Net.Dns.GetHostAddressesAsync(domain);
-            return addresses
-                .Where(a => a.AddressFamily == AddressFamily.InterNetwork)
-                .Select(a => a.ToString())
-                .Distinct()
-                .ToList();
+            using var client = new UdpClient();
+            client.Client.ReceiveTimeout = 3000;
+            client.Client.SendTimeout = 3000;
+
+            // Build DNS query for A record
+            var query = BuildDnsQuery(domain);
+            await client.SendAsync(query, query.Length, dnsServer, 53);
+
+            var response = await client.ReceiveAsync();
+            var ips = ParseDnsResponse(response.Buffer);
+            result.AddRange(ips);
         }
-        catch
+        catch { }
+
+        return result;
+    }
+
+    private static byte[] BuildDnsQuery(string domain)
+    {
+        using var ms = new MemoryStream();
+        var writer = new BinaryWriter(ms);
+
+        // Transaction ID (random)
+        var rng = new Random();
+        writer.Write((ushort)rng.Next(1, 65535));
+
+        // Flags: standard query
+        writer.Write((ushort)0x0100);
+        // Questions: 1
+        writer.Write((ushort)0x0001);
+        // Answer RRs
+        writer.Write((ushort)0x0000);
+        // Authority RRs
+        writer.Write((ushort)0x0000);
+        // Additional RRs
+        writer.Write((ushort)0x0000);
+
+        // Question: encode domain
+        foreach (var label in domain.Split('.'))
         {
-            return new List<string>();
+            var bytes = System.Text.Encoding.ASCII.GetBytes(label);
+            writer.Write((byte)bytes.Length);
+            writer.Write(bytes);
         }
+        writer.Write((byte)0x00); // End of domain
+
+        // QTYPE: A record (1)
+        writer.Write((ushort)0x0001);
+        // QCLASS: IN (1)
+        writer.Write((ushort)0x0001);
+
+        writer.Flush();
+        return ms.ToArray();
+    }
+
+    private static List<string> ParseDnsResponse(byte[] response)
+    {
+        var ips = new List<string>();
+        if (response.Length < 12) return ips;
+
+        try
+        {
+            int answerCount = (response[6] << 8) | response[7];
+            int pos = 12;
+
+            // Skip question section
+            while (pos < response.Length && response[pos] != 0x00)
+            {
+                if ((response[pos] & 0xC0) == 0xC0) { pos += 2; break; }
+                pos += response[pos] + 1;
+            }
+            if (response[pos] == 0x00) pos++;
+            pos += 4; // Skip QTYPE + QCLASS
+
+            // Read answers
+            for (int i = 0; i < answerCount && pos + 10 <= response.Length; i++)
+            {
+                // Skip name (may be compressed)
+                if ((response[pos] & 0xC0) == 0xC0) { pos += 2; }
+                else { while (pos < response.Length && response[pos] != 0x00) pos += response[pos] + 1; pos++; }
+
+                if (pos + 10 > response.Length) break;
+
+                int rtype = (response[pos] << 8) | response[pos + 1];
+                pos += 2; // Type
+                pos += 2; // Class
+                pos += 4; // TTL
+                int rdLength = (response[pos] << 8) | response[pos + 1];
+                pos += 2;
+
+                if (rtype == 1 && rdLength == 4 && pos + 4 <= response.Length) // A record
+                {
+                    var ip = new IPAddress(response[pos..(pos + 4)]).ToString();
+                    ips.Add(ip);
+                }
+
+                pos += rdLength;
+            }
+        }
+        catch { }
+
+        return ips;
     }
 
     private async Task<string?> ProbeFastestIpAsync(List<string> ips, int port)

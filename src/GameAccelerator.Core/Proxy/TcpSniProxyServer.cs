@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using GameAccelerator.Core.Dns;
+using GameAccelerator.Core.Network;
 using GameAccelerator.Core.Rules;
 using Microsoft.Extensions.Logging;
 
@@ -11,23 +12,21 @@ public class TcpSniProxyServer
 {
     private readonly RuleEngine _ruleEngine;
     private readonly IDnsOptimizer _dnsOptimizer;
+    private readonly TrafficCounter _trafficCounter;
     private readonly ILogger<TcpSniProxyServer> _logger;
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
     private int _activeConnections;
-    private long _totalBytesUp;
-    private long _totalBytesDown;
 
     public bool IsRunning { get; private set; }
     public int Port { get; }
     public int ActiveConnections => _activeConnections;
-    public long TotalBytesUp => _totalBytesUp;
-    public long TotalBytesDown => _totalBytesDown;
 
-    public TcpSniProxyServer(RuleEngine ruleEngine, IDnsOptimizer dnsOptimizer, ILogger<TcpSniProxyServer> logger, int port = 4433)
+    public TcpSniProxyServer(RuleEngine ruleEngine, IDnsOptimizer dnsOptimizer, TrafficCounter trafficCounter, ILogger<TcpSniProxyServer> logger, int port = 4433)
     {
         _ruleEngine = ruleEngine;
         _dnsOptimizer = dnsOptimizer;
+        _trafficCounter = trafficCounter;
         _logger = logger;
         Port = port;
     }
@@ -64,12 +63,6 @@ public class TcpSniProxyServer
         _logger.LogInformation("SNI Proxy stopped");
     }
 
-    public (long up, long down) GetTrafficAndReset()
-    {
-        return (Interlocked.Exchange(ref _totalBytesUp, 0),
-                Interlocked.Exchange(ref _totalBytesDown, 0));
-    }
-
     private async Task HandleConnectionAsync(TcpClient client, CancellationToken ct)
     {
         try
@@ -78,41 +71,58 @@ public class TcpSniProxyServer
             client.ReceiveTimeout = 30000;
             client.SendTimeout = 30000;
 
-            // Peek the first bytes to detect TLS or HTTP
             byte[] peekBuffer = new byte[4096];
             int read = await stream.ReadAsync(peekBuffer, 0, peekBuffer.Length, ct);
             if (read == 0) return;
 
+            var initialData = peekBuffer[..read];
             string? domain = null;
-            byte[] originalData = peekBuffer[..read];
+            int upstreamPort = 443;
+            bool isConnect = false;
 
-            if (read >= 5 && peekBuffer[0] == 0x16) // TLS ClientHello
+            if (read >= 5 && initialData[0] == 0x16) // TLS ClientHello (direct)
             {
-                domain = ParseSni(originalData);
+                domain = ParseSni(initialData);
             }
-            else // HTTP
+            else
             {
-                domain = ParseHttpHost(originalData);
+                var text = System.Text.Encoding.ASCII.GetString(initialData);
+                if (text.StartsWith("CONNECT "))
+                {
+                    // HTTP CONNECT proxy request
+                    isConnect = true;
+                    domain = ParseConnectHost(text);
+                    if (!string.IsNullOrEmpty(domain))
+                    {
+                        var colonIdx = domain.LastIndexOf(':');
+                        if (colonIdx > 0 && int.TryParse(domain[(colonIdx + 1)..], out var p))
+                        {
+                            upstreamPort = p;
+                            domain = domain[..colonIdx];
+                        }
+                    }
+                }
+                else
+                {
+                    domain = ParseHttpHost(initialData);
+                }
             }
 
             if (string.IsNullOrEmpty(domain))
             {
-                _logger.LogDebug("Could not parse domain, direct forwarding");
+                _logger.LogDebug("Could not parse domain");
                 return;
             }
 
-            _logger.LogDebug("Parsed domain: {Domain}", domain);
+            _logger.LogDebug("Parsed domain: {Domain}, connect={IsConnect}", domain, isConnect);
 
-            // Find matching rule
             var rule = _ruleEngine.Match(domain);
             string? upstreamIp = null;
-            int upstreamPort = 443;
 
             if (rule != null)
             {
                 upstreamPort = rule.UpstreamPort;
-                _logger.LogDebug("Matched rule: {Pattern}, strategy: {Strategy}, type: {UpstreamType}",
-                    rule.DomainPattern, rule.ProxyStrategy, rule.UpstreamType);
+                _logger.LogDebug("Matched rule: {Pattern}", rule.DomainPattern);
 
                 upstreamIp = rule.UpstreamType switch
                 {
@@ -125,7 +135,6 @@ public class TcpSniProxyServer
 
             if (string.IsNullOrEmpty(upstreamIp))
             {
-                // Fallback to standard DNS
                 try
                 {
                     var addresses = await System.Net.Dns.GetHostAddressesAsync(domain, ct);
@@ -144,13 +153,20 @@ public class TcpSniProxyServer
 
             using var upstream = new TcpClient();
             await upstream.ConnectAsync(IPAddress.Parse(upstreamIp), upstreamPort, ct);
-
             var upstreamStream = upstream.GetStream();
 
-            // Send the originally read data to upstream
-            await upstreamStream.WriteAsync(originalData, 0, originalData.Length, ct);
+            if (isConnect)
+            {
+                // Reply 200 to client, then relay raw bytes
+                var okResponse = System.Text.Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection Established\r\n\r\n");
+                await stream.WriteAsync(okResponse, 0, okResponse.Length, ct);
+            }
+            else
+            {
+                // Send the initially read data to upstream
+                await upstreamStream.WriteAsync(initialData, 0, initialData.Length, ct);
+            }
 
-            // Bidirectional relay
             var relayTask1 = RelayAsync(stream, upstreamStream, ct, true);
             var relayTask2 = RelayAsync(upstreamStream, stream, ct, false);
             await Task.WhenAny(relayTask1, relayTask2);
@@ -178,9 +194,9 @@ public class TcpSniProxyServer
                 await to.WriteAsync(buffer, 0, read, ct);
 
                 if (isUpload)
-                    Interlocked.Add(ref _totalBytesUp, read);
+                    _trafficCounter.AddUpload(read);
                 else
-                    Interlocked.Add(ref _totalBytesDown, read);
+                    _trafficCounter.AddDownload(read);
             }
         }
         catch { }
@@ -258,6 +274,15 @@ public class TcpSniProxyServer
             }
         }
         catch { }
+        return null;
+    }
+
+    private static string? ParseConnectHost(string request)
+    {
+        // CONNECT host:port HTTP/1.1
+        var parts = request.Split(' ');
+        if (parts.Length >= 2)
+            return parts[1]; // host:port
         return null;
     }
 

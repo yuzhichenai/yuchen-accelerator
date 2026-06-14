@@ -45,8 +45,9 @@ public static class ServiceCollectionExtensions
             var config = sp.GetRequiredService<AppConfig>();
             var engine = sp.GetRequiredService<RuleEngine>();
             var dns = sp.GetRequiredService<IDnsOptimizer>();
+            var traffic = sp.GetRequiredService<TrafficCounter>();
             var logger = sp.GetRequiredService<ILogger<TcpSniProxyServer>>();
-            return new TcpSniProxyServer(engine, dns, logger, config.SniProxyPort);
+            return new TcpSniProxyServer(engine, dns, traffic, logger, config.SniProxyPort);
         });
 
         // SOCKS5

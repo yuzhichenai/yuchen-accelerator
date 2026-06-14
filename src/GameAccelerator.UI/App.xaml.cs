@@ -9,6 +9,7 @@ namespace GameAccelerator.UI;
 public partial class App : Application
 {
     private readonly ServiceProvider _serviceProvider;
+    private Mutex? _mutex;
 
     public App()
     {
@@ -48,7 +49,7 @@ public partial class App : Application
         ruleEngine.Reload();
 
         // Single instance check
-        var mutex = new Mutex(true, "GameAccelerator_SingleInstance", out bool createdNew);
+        _mutex = new Mutex(true, "GameAccelerator_SingleInstance", out bool createdNew);
         if (!createdNew)
         {
             MessageBox.Show("游戏加速器已在运行中。", "Game Accelerator",

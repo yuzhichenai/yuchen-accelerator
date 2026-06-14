@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "updated": "2026-06-14",
+  "rules": [
+    {
+      "domainPattern": "*.valve.net",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 5,
+      "description": "Valve Game Servers"
+    },
+    {
+      "domainPattern": "*.steamgames.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 5,
+      "description": "Steam Games CDN"
+    },
+    {
+      "domainPattern": "*.dota2.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "Dota 2"
+    },
+    {
+      "domainPattern": "*.csgo.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "CS2"
+    },
+    {
+      "domainPattern": "*.counter-strike.net",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 10,
+      "description": "CS2 Servers"
+    },
+    {
+      "domainPattern": "*.ea.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "EA Games (Apex, Battlefield)"
+    },
+    {
+      "domainPattern": "*.origin.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "EA Origin"
+    },
+    {
+      "domainPattern": "*.pubg.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "PUBG"
+    },
+    {
+      "domainPattern": "*.pubg.gamepcdn.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "PUBG CDN"
+    },
+    {
+      "domainPattern": "*.epicgames.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Epic Games (Fortnite)"
+    },
+    {
+      "domainPattern": "*.epicgames.dev",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Epic Games Services"
+    },
+    {
+      "domainPattern": "*.ubisoft.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Ubisoft (Rainbow Six, Division)"
+    },
+    {
+      "domainPattern": "*.ubi.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Ubisoft Connect"
+    },
+    {
+      "domainPattern": "*.rockstargames.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Rockstar Games (GTA V)"
+    },
+    {
+      "domainPattern": "*.battle.net",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Battle.net (Overwatch, CoD)"
+    },
+    {
+      "domainPattern": "*.blizzard.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Blizzard Services"
+    },
+    {
+      "domainPattern": "*.wargaming.net",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Wargaming (World of Tanks)"
+    },
+    {
+      "domainPattern": "*.riotgames.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Riot Games (LoL, Valorant)"
+    },
+    {
+      "domainPattern": "*.leagueoflegends.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "League of Legends"
+    },
+    {
+      "domainPattern": "*.playvalorant.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 15,
+      "description": "Valorant"
+    },
+    {
+      "domainPattern": "*.bungie.net",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Bungie (Destiny 2)"
+    },
+    {
+      "domainPattern": "*.warframe.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Warframe"
+    },
+    {
+      "domainPattern": "*.pathofexile.com",
+      "proxyStrategy": "SniProxy",
+      "upstreamType": "FastestCdn",
+      "upstreamPort": 443,
+      "priority": 20,
+      "description": "Path of Exile"
+    }
+  ]
+}
